@@ -1,0 +1,430 @@
+{
+  "TEST-RTR-21": {
+    "interfaces": {
+      "interface": {
+        "GigabitEthernet1": {
+          "ip_address": "10.21.22.1",
+          "interface_is_ok": "YES",
+          "method": "NVRAM",
+          "status": "up",
+          "protocol": "up"
+        },
+        "GigabitEthernet2": {
+          "ip_address": "10.21.23.1",
+          "interface_is_ok": "YES",
+          "method": "NVRAM",
+          "status": "up",
+          "protocol": "up"
+        },
+        "GigabitEthernet3": {
+          "ip_address": "unassigned",
+          "interface_is_ok": "YES",
+          "method": "NVRAM",
+          "status": "administratively down",
+          "protocol": "down"
+        },
+        "GigabitEthernet4": {
+          "ip_address": "unassigned",
+          "interface_is_ok": "YES",
+          "method": "NVRAM",
+          "status": "administratively down",
+          "protocol": "down"
+        },
+        "GigabitEthernet5": {
+          "ip_address": "unassigned",
+          "interface_is_ok": "YES",
+          "method": "NVRAM",
+          "status": "administratively down",
+          "protocol": "down"
+        },
+        "GigabitEthernet6": {
+          "ip_address": "unassigned",
+          "interface_is_ok": "YES",
+          "method": "NVRAM",
+          "status": "administratively down",
+          "protocol": "down"
+        },
+        "GigabitEthernet7": {
+          "ip_address": "unassigned",
+          "interface_is_ok": "YES",
+          "method": "NVRAM",
+          "status": "administratively down",
+          "protocol": "down"
+        },
+        "GigabitEthernet8": {
+          "ip_address": "198.18.135.21",
+          "interface_is_ok": "YES",
+          "method": "NVRAM",
+          "status": "up",
+          "protocol": "up"
+        },
+        "Loopback0": {
+          "ip_address": "10.0.0.21",
+          "interface_is_ok": "YES",
+          "method": "NVRAM",
+          "status": "up",
+          "protocol": "up"
+        }
+      }
+    },
+    "vlans": {
+      "vlan": {
+        "vlan1": {
+          "vlan_name": "default",
+          "vlan_status": "active"
+        },
+        "vlan1002": {
+          "vlan_name": "fddi-default",
+          "vlan_status": "act/unsup"
+        },
+        "vlan1003": {
+          "vlan_name": "token-ring-default",
+          "vlan_status": "act/unsup"
+        },
+        "vlan1004": {
+          "vlan_name": "fddinet-default",
+          "vlan_status": "act/unsup"
+        },
+        "vlan1005": {
+          "vlan_name": "trnet-default",
+          "vlan_status": "act/unsup"
+        }
+      }
+    }
+  },
+  "TEST-CORE-22": {
+    "interfaces": {
+      "interface": {
+        "GigabitEthernet0/0": {
+          "ip_address": "198.18.135.22",
+          "interface_is_ok": "YES",
+          "method": "NVRAM",
+          "status": "up",
+          "protocol": "up"
+        },
+        "GigabitEthernet0/1": {
+          "ip_address": "10.21.22.2",
+          "interface_is_ok": "YES",
+          "method": "NVRAM",
+          "status": "up",
+          "protocol": "up"
+        },
+        "GigabitEthernet0/2": {
+          "ip_address": "10.22.23.1",
+          "interface_is_ok": "YES",
+          "method": "NVRAM",
+          "status": "up",
+          "protocol": "up"
+        },
+        "GigabitEthernet0/3": {
+          "ip_address": "unassigned",
+          "interface_is_ok": "YES",
+          "method": "unset",
+          "status": "down",
+          "protocol": "down"
+        },
+        "GigabitEthernet1/0": {
+          "ip_address": "10.22.24.1",
+          "interface_is_ok": "YES",
+          "method": "NVRAM",
+          "status": "up",
+          "protocol": "up"
+        },
+        "GigabitEthernet1/1": {
+          "ip_address": "10.22.25.1",
+          "interface_is_ok": "YES",
+          "method": "NVRAM",
+          "status": "up",
+          "protocol": "up"
+        },
+        "GigabitEthernet1/2": {
+          "ip_address": "unassigned",
+          "interface_is_ok": "YES",
+          "method": "unset",
+          "status": "down",
+          "protocol": "down"
+        },
+        "GigabitEthernet1/3": {
+          "ip_address": "unassigned",
+          "interface_is_ok": "YES",
+          "method": "unset",
+          "status": "down",
+          "protocol": "down"
+        },
+        "GigabitEthernet2/0": {
+          "ip_address": "unassigned",
+          "interface_is_ok": "YES",
+          "method": "unset",
+          "status": "down",
+          "protocol": "down"
+        },
+        "Group-Async8": {
+          "ip_address": "unassigned",
+          "interface_is_ok": "YES",
+          "method": "unset",
+          "status": "down",
+          "protocol": "down"
+        },
+        "Loopback0": {
+          "ip_address": "10.0.0.22",
+          "interface_is_ok": "YES",
+          "method": "NVRAM",
+          "status": "up",
+          "protocol": "up"
+        }
+      }
+    },
+    "vlans": {
+      "vlan": {
+        "vlan1": {
+          "vlan_name": "default",
+          "vlan_status": "active",
+          "vlan_port": [
+            "Gi0/3",
+            "Gi1/2",
+            "Gi1/3",
+            "Gi2/0"
+          ]
+        },
+        "vlan1002": {
+          "vlan_name": "fddi-default",
+          "vlan_status": "act/unsup"
+        },
+        "vlan1003": {
+          "vlan_name": "token-ring-default",
+          "vlan_status": "act/unsup"
+        },
+        "vlan1004": {
+          "vlan_name": "fddinet-default",
+          "vlan_status": "act/unsup"
+        },
+        "vlan1005": {
+          "vlan_name": "trnet-default",
+          "vlan_status": "act/unsup"
+        }
+      }
+    }
+  },
+  "TEST-CORE-23": {
+    "interfaces": {
+      "interface": {
+        "GigabitEthernet0/0": {
+          "ip_address": "198.18.135.23",
+          "interface_is_ok": "YES",
+          "method": "NVRAM",
+          "status": "up",
+          "protocol": "up"
+        },
+        "GigabitEthernet0/1": {
+          "ip_address": "10.21.23.2",
+          "interface_is_ok": "YES",
+          "method": "NVRAM",
+          "status": "up",
+          "protocol": "up"
+        },
+        "GigabitEthernet0/2": {
+          "ip_address": "10.22.23.2",
+          "interface_is_ok": "YES",
+          "method": "NVRAM",
+          "status": "up",
+          "protocol": "up"
+        },
+        "GigabitEthernet0/3": {
+          "ip_address": "unassigned",
+          "interface_is_ok": "YES",
+          "method": "unset",
+          "status": "down",
+          "protocol": "down"
+        },
+        "GigabitEthernet1/0": {
+          "ip_address": "10.23.24.1",
+          "interface_is_ok": "YES",
+          "method": "NVRAM",
+          "status": "up",
+          "protocol": "up"
+        },
+        "GigabitEthernet1/1": {
+          "ip_address": "10.23.25.1",
+          "interface_is_ok": "YES",
+          "method": "NVRAM",
+          "status": "up",
+          "protocol": "up"
+        },
+        "Loopback0": {
+          "ip_address": "10.0.0.23",
+          "interface_is_ok": "YES",
+          "method": "NVRAM",
+          "status": "up",
+          "protocol": "up"
+        }
+      }
+    },
+    "vlans": {
+      "vlan": {
+        "vlan1": {
+          "vlan_name": "default",
+          "vlan_status": "active",
+          "vlan_port": [
+            "Gi0/3"
+          ]
+        },
+        "vlan1002": {
+          "vlan_name": "fddi-default",
+          "vlan_status": "act/unsup"
+        },
+        "vlan1003": {
+          "vlan_name": "token-ring-default",
+          "vlan_status": "act/unsup"
+        },
+        "vlan1004": {
+          "vlan_name": "fddinet-default",
+          "vlan_status": "act/unsup"
+        },
+        "vlan1005": {
+          "vlan_name": "trnet-default",
+          "vlan_status": "act/unsup"
+        }
+      }
+    }
+  },
+  "TEST-ACC-24": {
+    "interfaces": {
+      "interface": {
+        "GigabitEthernet0/0": {
+          "ip_address": "198.18.135.24",
+          "interface_is_ok": "YES",
+          "method": "NVRAM",
+          "status": "up",
+          "protocol": "up"
+        },
+        "GigabitEthernet0/1": {
+          "ip_address": "unassigned",
+          "interface_is_ok": "YES",
+          "method": "unset",
+          "status": "up",
+          "protocol": "up"
+        },
+        "GigabitEthernet0/2": {
+          "ip_address": "unassigned",
+          "interface_is_ok": "YES",
+          "method": "unset",
+          "status": "up",
+          "protocol": "up"
+        },
+        "GigabitEthernet0/3": {
+          "ip_address": "unassigned",
+          "interface_is_ok": "YES",
+          "method": "unset",
+          "status": "down",
+          "protocol": "down"
+        },
+        "Loopback0": {
+          "ip_address": "10.0.0.24",
+          "interface_is_ok": "YES",
+          "method": "NVRAM",
+          "status": "up",
+          "protocol": "up"
+        }
+      }
+    },
+    "vlans": {
+      "vlan": {
+        "vlan1": {
+          "vlan_name": "default",
+          "vlan_status": "active",
+          "vlan_port": [
+            "Gi0/1",
+            "Gi0/2",
+            "Gi0/3"
+          ]
+        },
+        "vlan1002": {
+          "vlan_name": "fddi-default",
+          "vlan_status": "act/unsup"
+        },
+        "vlan1003": {
+          "vlan_name": "token-ring-default",
+          "vlan_status": "act/unsup"
+        },
+        "vlan1004": {
+          "vlan_name": "fddinet-default",
+          "vlan_status": "act/unsup"
+        },
+        "vlan1005": {
+          "vlan_name": "trnet-default",
+          "vlan_status": "act/unsup"
+        }
+      }
+    }
+  },
+  "TEST-ACC-25": {
+    "interfaces": {
+      "interface": {
+        "GigabitEthernet0/0": {
+          "ip_address": "198.18.135.25",
+          "interface_is_ok": "YES",
+          "method": "NVRAM",
+          "status": "up",
+          "protocol": "up"
+        },
+        "GigabitEthernet0/1": {
+          "ip_address": "unassigned",
+          "interface_is_ok": "YES",
+          "method": "unset",
+          "status": "up",
+          "protocol": "up"
+        },
+        "GigabitEthernet0/2": {
+          "ip_address": "unassigned",
+          "interface_is_ok": "YES",
+          "method": "unset",
+          "status": "up",
+          "protocol": "up"
+        },
+        "GigabitEthernet0/3": {
+          "ip_address": "unassigned",
+          "interface_is_ok": "YES",
+          "method": "unset",
+          "status": "down",
+          "protocol": "down"
+        },
+        "Loopback0": {
+          "ip_address": "10.0.0.25",
+          "interface_is_ok": "YES",
+          "method": "NVRAM",
+          "status": "up",
+          "protocol": "up"
+        }
+      }
+    },
+    "vlans": {
+      "vlan": {
+        "vlan1": {
+          "vlan_name": "default",
+          "vlan_status": "active",
+          "vlan_port": [
+            "Gi0/1",
+            "Gi0/2",
+            "Gi0/3"
+          ]
+        },
+        "vlan1002": {
+          "vlan_name": "fddi-default",
+          "vlan_status": "act/unsup"
+        },
+        "vlan1003": {
+          "vlan_name": "token-ring-default",
+          "vlan_status": "act/unsup"
+        },
+        "vlan1004": {
+          "vlan_name": "fddinet-default",
+          "vlan_status": "act/unsup"
+        },
+        "vlan1005": {
+          "vlan_name": "trnet-default",
+          "vlan_status": "act/unsup"
+        }
+      }
+    }
+  }
+}
