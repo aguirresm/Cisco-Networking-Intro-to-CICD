@@ -4,11 +4,11 @@ on:
   push:
     branches: [main]
     paths:
-      - '.ansible-cml/playbooks/**.yaml'
+      - 'ansible-cml/playbooks/**.yaml'
   pull_request:
     branches: [main]
     paths:
-      - '.ansible-cml/playbooks/**.yaml'
+      - 'ansible-cml/playbooks/**.yaml'
 
 env:
   ANSIBLE_HOST_KEY_CHECKING: "False"
