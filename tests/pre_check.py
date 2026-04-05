@@ -1,8 +1,10 @@
 from genie.testbed import load
 import json
+import os
  
 # Load the testbed
-testbed = load("testbed/lab_testbed.yaml")
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+testbed = load(os.path.join(BASE_DIR, "testbed/lab_testbed.yaml"))
  
 snapshot = {}
  

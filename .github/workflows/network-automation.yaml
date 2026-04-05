@@ -3,13 +3,13 @@ on:
   push:
     branches: [main]
     paths:
-      - 'ansible-cml/playbooks/**.yaml'
-      - 'ansible-cml/playbooks/**.yml'
+      - 'playbooks/**.yaml'
+      - 'playbooks/**.yml'
   pull_request:
     branches: [main]
     paths:
-      - 'ansible-cml/playbooks/**.yaml'
-      - 'ansible-cml/playbooks/**.yml'
+      - 'playbooks/**.yaml'
+      - 'playbooks/**.yml'
 env:
   ANSIBLE_HOST_KEY_CHECKING: "False"
 jobs:
