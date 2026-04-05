@@ -8,7 +8,7 @@
 # Usage:    ansible-playbook -i inventory/digital-twin/hosts.ini verify_vlans.yml
 # =============================================================================
 
-- name: Verify VLANs on devices
+- name: Verify VLANs on switches
   hosts: switches
   gather_facts: false
   vars_files:
