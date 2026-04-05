@@ -29,7 +29,7 @@
       *  All activity on this device is monitored and recorded. By continuing  *
       *  to access this system you consent to such monitoring.                 *
       *                                                                        *
-      *  If you are not an authorised user, disconnect IMMEDIATELY.            *
+      *  If you are not an authorised user, disconnect IMMEDIATELY!            *
       **************************************************************************
 
     # IOS banner delimiter — must not appear inside the banner text itself
