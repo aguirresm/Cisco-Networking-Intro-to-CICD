@@ -34,7 +34,7 @@ jobs:
     needs: pre_check
     steps:
       - name: Fetch base branch
-        run: git fetch origin main --depth=1
+        run: git fetch origin main --depth=50
 
       - name: Detect changed playbook
         id: changed
