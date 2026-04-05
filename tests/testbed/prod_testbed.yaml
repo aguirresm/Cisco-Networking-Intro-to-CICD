@@ -1,0 +1,92 @@
+testbed:
+  name: Production_Testbed
+  credentials:
+    default:
+      username: "ansible"
+      password: "C1sco12345"
+devices:
+  PROD-RTR-11:
+    os: iosxe
+    type: router
+    connections:
+      cli:
+        protocol: ssh
+        ip: 198.18.135.11
+        ssh_options: "-o KexAlgorithms=+diffie-hellman-group14-sha1,diffie-hellman-group-exchange-sha1,diffie-hellman-group1-sha1 -o HostKeyAlgorithms=+ssh-rsa -o StrictHostKeyChecking=no"
+  PROD-RTR-12:
+    os: iosxe
+    type: router
+    connections:
+      cli:
+        protocol: ssh
+        ip: 198.18.135.12
+        ssh_options: "-o KexAlgorithms=+diffie-hellman-group14-sha1,diffie-hellman-group-exchange-sha1,diffie-hellman-group1-sha1 -o HostKeyAlgorithms=+ssh-rsa -o StrictHostKeyChecking=no"
+  PROD-CORE-13:
+    os: iosxe
+    type: switch
+    connections:
+      cli:
+        protocol: ssh
+        ip: 198.18.135.13
+        ssh_options: "-o KexAlgorithms=+diffie-hellman-group14-sha1,diffie-hellman-group-exchange-sha1,diffie-hellman-group1-sha1 -o HostKeyAlgorithms=+ssh-rsa -o StrictHostKeyChecking=no"
+  PROD-CORE-14:
+    os: iosxe
+    type: switch
+    connections:
+      cli:
+        protocol: ssh
+        ip: 198.18.135.14
+        ssh_options: "-o KexAlgorithms=+diffie-hellman-group14-sha1,diffie-hellman-group-exchange-sha1,diffie-hellman-group1-sha1 -o HostKeyAlgorithms=+ssh-rsa -o StrictHostKeyChecking=no"
+  PROD-ACC-15:
+    os: iosxe
+    type: switch
+    connections:
+      cli:
+        protocol: ssh
+        ip: 198.18.135.15
+        ssh_options: "-o KexAlgorithms=+diffie-hellman-group14-sha1,diffie-hellman-group-exchange-sha1,diffie-hellman-group1-sha1 -o HostKeyAlgorithms=+ssh-rsa -o StrictHostKeyChecking=no"
+  PROD-ACC-16:
+    os: iosxe
+    type: switch
+    connections:
+      cli:
+        protocol: ssh
+        ip: 198.18.135.16
+        ssh_options: "-o KexAlgorithms=+diffie-hellman-group14-sha1,diffie-hellman-group-exchange-sha1,diffie-hellman-group1-sha1 -o HostKeyAlgorithms=+ssh-rsa -o StrictHostKeyChecking=no"
+  PROD-ACC-17:
+    os: iosxe
+    type: switch
+    connections:
+      cli:
+        protocol: ssh
+        ip: 198.18.135.17
+        ssh_options: "-o KexAlgorithms=+diffie-hellman-group14-sha1,diffie-hellman-group-exchange-sha1,diffie-hellman-group1-sha1 -o HostKeyAlgorithms=+ssh-rsa -o StrictHostKeyChecking=no"
+topology:
+  PROD-RTR-11:
+    interfaces:
+      GigabitEthernet1:
+        type: ethernet
+  PROD-RTR-12:
+    interfaces:
+      GigabitEthernet1:
+        type: ethernet
+  PROD-CORE-13:
+    interfaces:
+      GigabitEthernet1:
+        type: ethernet
+  PROD-CORE-14:
+    interfaces:
+      GigabitEthernet1:
+        type: ethernet
+  PROD-ACC-15:
+    interfaces:
+      GigabitEthernet1:
+        type: ethernet
+  PROD-ACC-16:
+    interfaces:
+      GigabitEthernet1:
+        type: ethernet
+  PROD-ACC-17:
+    interfaces:
+      GigabitEthernet1:
+        type: ethernet
