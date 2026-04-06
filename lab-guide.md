@@ -332,7 +332,14 @@ In this task, we'll go for a more disruptive change.
  
 # Part 2: CI/CD for Network Automation
  
-> **Instructor Note:** This section assumes students have a GitHub account and access to the workshop repository. A self-hosted GitHub Actions Runner should be pre-registered and confirmed healthy before the workshop. Students should be added as collaborators (or members of the workshop org) before the session begins.
+The lab already has the repo loaded locally and the GitHub runner installd.
+Before we begin, let's make sure we sync your GitHub accounts with the environment and get the GitHub Actions runner registered locally.
+To do so, we will create an SSH key for registering to GitHub, and then pull a registration token from GitHub for the runner.
+
+```bash
+ssh-keygen -t ed25519 -C "name@email.com"   # new SSH key
+./config.sh --url <repo> --token <token>      # register runner
+```
  
 ---
  
@@ -340,10 +347,9 @@ In this task, we'll go for a more disruptive change.
  
 ### 4.1 Why CI/CD for Network Automation?
  
-> *(Instructor: Use the "why does this matter" moment here — tell a short story about a config change that broke production and how a pipeline would have caught it before it hit a real device.)*
- 
-Topics to cover:
+Discussion points:
 - What CI/CD means in a traditional software context
+- Any examples of config changes that broke production?
 - Why the same principles apply to network automation
 - The risk of running untested playbooks directly against production devices
 - The pipeline as a safety net, not a bureaucratic hurdle
@@ -352,13 +358,13 @@ Key concepts:
 - **Workflow** — an automated sequence of jobs triggered by a code event (e.g. a git push)
 - **Job** — a logical grouping of steps (e.g. validate, test, deploy)
 - **Step** — a single unit of work inside a job
-- **GitHub Actions Runner** — the agent that executes workflow jobs
+- **GitHub Actions Runner** — the local agent that executes workflow jobs
  
 ### 4.2 Our Pipeline — The Big Picture
- 
-> *(Instructor: Walk through the end-to-end flow before diving into any individual piece. A whiteboard sketch or diagram here works well.)*
- 
-The pipeline we'll build follows this flow:
+  
+The pipeline we'll build follows the flow below.
+One thing to note is that our workflow applies to different inventories depending on the type of action that was taken.
+We'll touch on that later on in the workshop.
  
 ```
 Developer pushes playbook changes to GitHub
@@ -388,31 +394,26 @@ Developer pushes playbook changes to GitHub
 ## Section 5: GitHub Project Setup
  
 ### 5.1 Repository Structure
- 
-> *(Instructor: Show the project repository that has been pre-created for the workshop. Walk through how it maps to what they built in Part 1.)*
- 
+  
+To our repository we add a directory for our workflows and one for our PyATS validations.
+This is a toy example for education purposes but in a production environment you're likely to have more workflows and tests depending on your needs.
+
 ```
 network-automation/
 ├── .github/
 │   └── workflows/
-│       └── network-automation.yml  ← workflow definition lives here
+│       └── network-automation.yaml
 ├── ansible.cfg
 ├── inventory/
-│   └── hosts.yml
-├── group_vars/
-│   └── all.yml
 ├── playbooks/
-│   ├── push_changes.yml
-│   └── rollback.yml
+├── vars/
 └── tests/
     ├── pre_check.py
     └── post_check.py
 ```
  
 ### 5.2 Introduction to `network-automation.yml`
- 
-> *(Instructor: This file is the heart of the workflow — spend time here. Students don't need to write it from scratch but should understand every section.)*
- 
+  
 Topics to cover:
 - How GitHub reads workflow files from `.github/workflows/` on every push
 - `on` — the trigger events (push, pull_request, workflow_dispatch)
@@ -421,7 +422,7 @@ Topics to cover:
 - `steps` — the ordered list of commands and actions within a job
 - `if` / conditions — controlling when jobs trigger
  
-**Workshop `network-automation.yml` skeleton to walk through:**
+**Workshop `network-automation.yaml` skeleton to walk through:**
  
 ```yaml
 name: Network Automation Pipeline
@@ -486,10 +487,9 @@ jobs:
         run: python tests/post_check.py
 ```
  
-### 5.3 GitHub Actions Runner — How Jobs Actually Run
+### 5.3 GitHub Actions Runner
  
-> *(Instructor: Brief explanation — students often wonder "where does this actually execute?")*
- 
+How do the jobs actually run? 
 - The self-hosted Runner picks up jobs from GitHub Actions
 - The Runner environment needs reachability to both GitHub and the CML devices
 - Show the Runner status in GitHub: **Settings → Actions → Runners**
@@ -499,9 +499,8 @@ jobs:
 ## Section 6: Pre- and Post-Validation with pyATS
  
 ### 6.1 What is pyATS?
- 
-> *(Instructor: Quick intro — don't go deep on the framework internals, just enough context for the demo to make sense.)*
- 
+
+Discussion points: 
 - Cisco's Python-based test and validation framework
 - **pyATS** = the test framework; **Genie** = the library of parsers and APIs on top of it
 - Can connect to devices, run `show` commands, and return structured (parsed) data
@@ -513,11 +512,11 @@ Key concepts for this section:
 - **Diff** — comparing two snapshots to identify what changed
  
 ### 6.2 The pyATS Testbed File
- 
-> *(Instructor: Show how the testbed maps to the Ansible inventory students already built — same devices, different format.)*
+
+The testbed maps closely to the inventory files we created for Ansible! Just with different syntax... 
  
 ```yaml
-# tests/testbed.yml
+# tests/testbed/lab_testbed.yaml
 testbed:
   name: workshop_lab
  
@@ -538,9 +537,7 @@ devices:
 ```
  
 ### 6.3 Pre-Check Script Walkthrough
- 
-> *(Instructor: Walk through the pre-built script — students do NOT write this from scratch. Focus on what it does, not how every line works.)*
- 
+  
 What the pre-check script does:
 - Connects to all devices using the testbed
 - Runs a set of `show` commands and parses the output via Genie
@@ -554,7 +551,7 @@ from genie.testbed import load
 import json
  
 # Load the testbed
-testbed = load("tests/testbed.yml")
+testbed = load("tests/testbed/lab_testbed.yml")
  
 snapshot = {}
  
@@ -579,8 +576,6 @@ print("Pre-check complete. Snapshot saved.")
  
 ### 6.4 Post-Check Script Walkthrough
  
-> *(Instructor: Show how the post-check loads the pre-snapshot artifact and compares it to current state. The diff output is the payoff moment — show a real diff if possible.)*
- 
 What the post-check script does:
 - Loads `pre_snapshot.json` from the pipeline artifact
 - Reconnects to all devices and captures state again
@@ -594,7 +589,7 @@ from genie.testbed import load
 from genie.utils.diff import Diff
 import json
  
-testbed = load("tests/testbed.yml")
+testbed = load("tests/testbed/testbed.yml")
  
 with open("pre_snapshot.json") as f:
     pre_snapshot = json.load(f)
@@ -627,37 +622,34 @@ if issues_found:
 ```
  
 ### 6.5 Lab Task — Trigger the Workflow
- 
-> *(Instructor: Have students make a small change to a playbook and push it to GitHub. Watch the workflow run together.)*
- 
+  
 Steps:
-1. Make a minor change to `playbooks/push_changes.yml` (e.g. add a new interface description)
-2. Commit and push to the `main` branch
-3. Navigate to the **Actions** tab in GitHub and watch the jobs execute
-4. Review the step logs for each job — pre-check, deploy, post-check
-5. Examine the diff output in the post-check job log
+1. Create a new feature branch with Git. (`git checkout -b feature/update-motd`)
+2. Make a minor change to `playbooks/update_motd.yml` (e.g. add different language)
+3. Commit and push to the `feature/update-motd` branch (`git add .` -> `git commit -m "message"` -> `git push origin feature/update-motd`)
+4. Navigate to GitHub and open a PR request for the recent feature branch push.
+5. Navigate to the **Actions** tab in GitHub and watch the jobs execute
+6. Review the step logs for each job — pre-check, deploy, post-check
+7. Examine the diff output in the post-check job log
  
 **Discussion points after the pipeline runs:**
 - What would cause the post-check to fail?
 - What happens if the deploy job fails — does post-check still run?
 - How would you add a rollback job triggered on failure?
+- What if we decide to merge the changes?
  
 ---
  
 ## Section 7: The Digital Twin — Testing Before You Touch Production
  
 ### 7.1 The Problem We're Solving
- 
-> *(Instructor: This is the "so what" moment for the whole workshop. Connect it back to the story from Section 4.1.)*
- 
+  
 - Even with a CI/CD pipeline, your playbooks are still running against real devices in the deploy stage
 - What if you could validate the playbook logic itself — before it ever touches production?
 - Enter: the CML "mini network" as a digital twin
  
 ### 7.2 How the Mini Network Works
- 
-> *(Instructor: Show the CML topology. Keep this conceptual — students don't need to build it, just understand the idea.)*
- 
+  
 Topics to cover:
 - A lightweight CML topology that mirrors the key elements of the production network
 - Same device types, same IOS versions, representative config
@@ -674,9 +666,7 @@ network-automation/
 ```
  
 ### 7.3 Extending the Pipeline for Twin Testing
- 
-> *(Instructor: Show how a single variable or inventory swap can redirect the pipeline at the CML lab instead of production.)*
- 
+  
 - Add a `test_in_twin` job before `deploy` that runs the playbook against `hosts_cml.yml`
 - If the twin job fails, the workflow stops before anything touches production
 - On pull requests, run twin only; on merge to main, run the full workflow
@@ -743,9 +733,7 @@ Walk through:
 ---
  
 ## Section Wrap-Up
- 
-> *(Instructor: Bring it all together — connect every piece of the workshop into one narrative.)*
- 
+  
 **Key takeaways from Part 2:**
  
 - A CI/CD workflow turns manual, error-prone playbook runs into a repeatable, auditable process
