@@ -251,14 +251,14 @@ Discussion Points:
 - Its limitations on network devices (not all modules support it fully)
 
 ```bash
-ansible-playbook playbooks/enforce_vlans.yml --check
+ansible-playbook playbooks/enforce_motd.yml --check
 ```
 
-### 3.2 Lab Task — Updating Interface Descriptions
+### 3.2 Lab Task — Updating MOTD Banner
 
-Let's start with a low risk change. We will modify the interface descriptions for access switch uplinks.
+Let's start with a low risk change. We will modify the MOTD banner for access switch uplinks.
 
-- Using `cisco.ios.ios_interfaces` to set interface descriptions
+- Using `cisco.ios.ios_banner` to set MOTD
 - Verifying the change with a follow-up `show` task
 
 ```yaml
@@ -335,7 +335,7 @@ In this task, we'll go for a more disruptive change, enforcing specific VLANs.
 - Always verify changes — use `--check`, gather facts before/after, and confirm with `show` commands
 - Idempotency means you can run playbooks repeatedly without fear of creating duplicate config
 
-**Coming up next:** Intro to CI/CD pipelines — how to take these playbooks and put guardrails around them with GitLab, linting, and automated validation.
+**Coming up next:** Intro to CI/CD pipelines — how to take these playbooks and put guardrails around them with GitHub and automated validation through PyATS.
 
 ---
  
