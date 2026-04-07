@@ -6,7 +6,10 @@
 vlans:
   - vlan_id: 100
     name: CORP
+    shutdown: disabled
   - vlan_id: 150
     name: IOT
+    shutdown: disabled
   - vlan_id: 200
     name: GUEST
+    shutdown: disabled
