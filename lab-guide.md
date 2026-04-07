@@ -498,7 +498,7 @@ Key concepts for this section:
 ### 6.2 The pyATS Testbed File
 
 The testbed maps closely to the inventory files we created for Ansible! Just with different syntax... 
- 
+
 ```yaml
 # Snippet of tests/testbed/lab_testbed.yaml
 testbed:
@@ -637,23 +637,6 @@ if issues_found:
     exit(1)  # Fails the pipeline stage
 ```
  
-### 6.5 Lab Task — Trigger the Workflow
-  
-Steps:
-1. Create a new feature branch with Git. (`git checkout -b feature/update-motd`)
-2. Make a minor change to `playbooks/update_motd.yml` (e.g. add different language)
-3. Commit and push to the `feature/update-motd` branch (`git add .` -> `git commit -m "message"` -> `git push origin feature/update-motd`)
-4. Navigate to GitHub and open a PR request for the recent feature branch push.
-5. Navigate to the **Actions** tab in GitHub and watch the jobs execute
-6. Review the step logs for each job — pre-check, deploy, post-check
-7. Examine the diff output in the post-check job log
- 
-**Discussion points after the pipeline runs:**
-- What would cause the post-check to fail?
-- What happens if the deploy job fails — does post-check still run?
-- How would you add a rollback job triggered on failure?
-- What if we decide to merge the changes?
- 
 ---
  
 ## Section 7: The Digital Twin — Testing Before You Touch Production
@@ -669,72 +652,62 @@ Steps:
 Topics to cover:
 - A lightweight CML topology that mirrors the key elements of the production network
 - Same device types, same IOS versions, representative config
-- Separate inventory file pointing at the CML devices instead of production
- 
+- Separate inventory file and variables pointing at the CML devices instead of production
+
 ### 7.3 Extending the Pipeline for Twin Testing
-  
-- Add a `test_in_twin` job before `deploy` that runs the playbook against `hosts_cml.yml`
 - If the twin job fails, the workflow stops before anything touches production
 - On pull requests, run twin only; on merge to main, run the full workflow
  
 **Extended workflow concept:**
  
 ```yaml
-name: Network Automation Pipeline
- 
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
- 
-jobs:
-  pre_check:
-    runs-on: self-hosted
-    steps:
-      - uses: actions/checkout@v4
-      - run: python tests/pre_check.py
-      - uses: actions/upload-artifact@v4
-        with:
-          name: pre-snapshot
-          path: pre_snapshot.json
- 
-  test_in_twin:        # ← new job
-    runs-on: self-hosted
-    needs: pre_check
-    steps:
-      - uses: actions/checkout@v4
-      - run: ansible-playbook playbooks/push_changes.yml -i inventory/hosts_cml.yml
- 
+# Snippet of ~/ansible-cml/.github/workflows/network-automation.yaml
+
   deploy:
     runs-on: self-hosted
-    needs: test_in_twin
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: pre_check
+    env:
+      TESTBED_ENV: ${{ github.event_name == 'pull_request' && 'lab' || 'prod' }}
     steps:
-      - uses: actions/checkout@v4
-      - run: ansible-playbook playbooks/push_changes.yml
- 
-  post_check:
-    runs-on: self-hosted
-    needs: deploy
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - name: Fetch base branch
+        run: git fetch origin main --depth=50
+
+      - name: Detect changed playbook
+        id: changed
+        uses: tj-actions/changed-files@v46
         with:
-          name: pre-snapshot
-      - run: python tests/post_check.py
+          files: |
+            playbooks/**.yml
+            playbooks/**.yaml
+
+      - name: Deploy changes
+        if: steps.changed.outputs.any_changed == 'true'
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            ansible-playbook ${{ steps.changed.outputs.all_changed_files }} -i inventory/digital-twin/hosts.yaml
+          else
+            ansible-playbook ${{ steps.changed.outputs.all_changed_files }} -i inventory/prod/hosts.yaml
+          fi
 ```
  
-### 7.4 Demo — Catching a Bad Playbook in the Twin
+### 7.4 Demo — Running the workflow
+
+Steps:
+1. Create a new feature branch with Git. (`git checkout -b feature/update-playbook`)
+2. Make a minor change to `playbooks/update_motd.yml` (e.g. add different banner)
+3. Commit and push to the `feature/update-motd` branch (`git add .` -> `git commit -m "commit msg"` -> `git push origin feature/update-motd`)
+4. Navigate to GitHub and open a PR request for the recent feature branch push.
+5. Navigate to the **Actions** tab in GitHub and watch the jobs execute
+6. Review the step logs for each job — pre-check, deploy, post-check
+7. Examine the diff output in the post-check job log
+8. If the PR looks good, merge to main.
+9. Watch the pipeline run once more, this time against the prod inventory!
  
-Let's try a change that would've caused an issue in the environment...
- 
-Walk through:
-1. Show the "bad" playbook change in GitHub
-2. Open a pull request — workflow triggers twin test only
-3. Watch the twin job fail with a clear error
-4. Show that `deploy` never ran — production is untouched
-5. Fix the playbook, push again, watch the twin pass, merge to main, full workflow runs
+**Discussion points after the pipeline runs:**
+- What would cause the post-check to fail?
+- What kind of tests make sense to run for validation?
+- What happens if the deploy job fails — does post-check still run?
+- How would you add a rollback job triggered on failure?
  
 ---
  
