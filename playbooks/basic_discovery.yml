@@ -1,0 +1,15 @@
+- name: Basic Discovery
+  hosts: all
+  gather_facts: no
+
+  tasks:
+    - name: Gather device version info
+      cisco.ios.ios_command:
+        commands:
+          - show version
+          - show ip interface brief
+          - show cdp neighbors detail
+      register: discovery_output
+    - name: Display output
+      ansible.builtin.debug:
+        var: discovery_output.stdout_lines

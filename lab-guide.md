@@ -13,15 +13,19 @@ Approximate time: 1.5hr
 
 ### 1.1 What is Ansible?
 
-> *Instructor: Brief conceptual overview — what problem does Ansible solve? Why do network engineers care?*
+Discussion questions:
+- What problem does Ansible solve?
+- Why is it important for Network Engineers?
 
+Topics to cover:
 - Agentless automation — how it works over SSH/NETCONF
 - Idempotency — what it means and why it matters in networking
 - Key terms to know: **Control node**, **Managed nodes**, **Playbook**, **Task**, **Module**
 
 ### 1.2 Ansible Project Structure
 
-> *Instructor: Walk through the folder layout students will be working with. Remind students that all work should be done inside the WSL filesystem — `~/ansible-cml/`*
+As Ansible runs only on Linux, we will be working solely in WSL within the Windows jumphost.
+The following is an overview of the directory structure of our Ansible project. Note that the actual repository include additional files not shown we'll speak to later!
 
 ```
 ansible-cml
@@ -40,12 +44,11 @@ ansible-cml
 ├── playbooks
 │   ├── show_vlans.yml
 │   └── verify_vlans.yml
-├── roles
 └── vars
     └── vlans.yml
 ```
 
-Brief description of the purpose of each component:
+Key components to walk through:
 
 - `ansible.cfg` — project-level configuration file
 - `inventory/` — defines the devices Ansible will manage
@@ -63,7 +66,7 @@ Topics to cover:
 **Example PROD inventory:**
 
 ```yaml
-# inventory/prod/hosts.yaml
+# ~/ansible-cml/inventory/prod/hosts.yaml
 
 all:
   children:
@@ -75,30 +78,34 @@ all:
               ansible_host: 198.18.135.11
             PROD-RTR-12:
               ansible_host: 198.18.135.12
-        switches_core:
-          hosts:
-            PROD-CORE-13:
-              ansible_host: 198.18.135.13
-            PROD-CORE-14:
-              ansible_host: 198.18.135.14
-        switches_access:
-          hosts:
-            PROD-ACC-15:
-              ansible_host: 198.18.135.15
-            PROD-ACC-16:
-              ansible_host: 198.18.135.16
-            PROD-ACC-17:
-              ansible_host: 198.18.135.17
+        switches:
+          children:
+            switches_core:
+              hosts:
+                PROD-CORE-13:
+                  ansible_host: 198.18.135.13
+                PROD-CORE-14:
+                  ansible_host: 198.18.135.14
+            switches_access:
+              hosts:
+                PROD-ACC-15:
+                  ansible_host: 198.18.135.15
+                PROD-ACC-16:
+                  ansible_host: 198.18.135.16
+                PROD-ACC-17:
+                  ansible_host: 198.18.135.17
 ```
 
 ### 1.4 Variables
+Topics to cover:
 - Where to define credentials (vars vs group_vars vs vault)
 - Common network variables: `ansible_network_os`, `ansible_connection`, `ansible_become`
-- Brief mention of **Ansible Vault** for credential security (no deep dive needed)
+- Brief mention of **Ansible Vault** for credential security
 
-**Example `prod/group_vars/cisco.yml`:**
+**Example group_vars file :**
 
 ```yaml
+# ~/ansible-cml/inventory/prod/group_vars/all.yml`
 ansible_user: admin
 ansible_password: "{{ vault_password }}"
 ansible_network_os: cisco.ios.ios
@@ -108,12 +115,13 @@ ansible_become_method: enable
 ```
 
 ### 1.5 `ansible.cfg` Walkthrough
-Understand the key defaults used throughout the lab.
+The `ansible.cfg` file represents default configuration values for the Ansible engine itself.
+This could include how Ansible connects to devices, SSH settings, and default paths to use. 
 
 ```ini
 [defaults]
 inventory = ./inventory/digital-twin/hosts.yaml
-remote_user = admin
+remote_user = ansible
 host_key_checking = False
 ```
 
@@ -123,29 +131,29 @@ host_key_checking = False
 
 ### 2.1 Your First Command — `ansible` Ad-Hoc
 
-> *(Instructor: Show that Ansible can be used without a playbook for quick tasks)*
+Discussion questions:
+- Why did we use ios_ping and not Ansible ping?
 
-- Syntax: `ansible <host/group> -m <module> -a <args>`
-- Run a ping against all devices to confirm connectivity
+While the goal is to utilize Ansible in a structured pipeline, it can also be used as needed for ad-hoc checks.
+
+- Syntax: `ansible <host/group> -m <module> -i <inventory-path> -a <args> `
+- Run a connection test/ping against all devices to confirm connectivity
 
 **Lab Task 2.1 — Ad-Hoc Ping:**
 
 ```bash
-ansible all -m cisco.ios.ios_ping
+ansible all -m cisco.ios.ios_ping -a "dest=198.18.128.1 vrf=Mgmt-vrf"
 ```
 
-> *(Instructor: Explain the difference between Ansible's `ping` module and ICMP ping. For network devices, use `cisco.ios.ios_ping` or simply confirm SSH connectivity.)*
-
 ### 2.2 Anatomy of a Playbook
-
-> *(Instructor: Walk through each part of a basic playbook before running anything)*
+Now, walking through a basic playbook, let's take a look at what each part means and how its used.
 
 - `hosts:` — which inventory targets to run against
 - `gather_facts:` — typically disabled for network devices
 - `tasks:` — ordered list of modules to execute
 - `name:` — human-readable label for each task
 
-**Example skeleton to walk through:**
+Below is an example skeleton for us to work through:
 
 ```yaml
 ---
@@ -162,7 +170,7 @@ ansible all -m cisco.ios.ios_ping
 
 ### 2.3 Brownfield Discovery — Mapping the Network
 
-> *(Instructor: Frame this section — "You already have a network running. Let's use Ansible to document what's there.")*
+You already have a network... How can we get started with using Ansible in a brownfield environment? Visibility!
 
 Topics to cover:
 - Using `cisco.ios.ios_command` to run `show` commands
@@ -173,7 +181,7 @@ Topics to cover:
 
 ```yaml
 ---
-- name: Brownfield Discovery
+- name: Basic Discovery
   hosts: all
   gather_facts: no
 
@@ -192,7 +200,7 @@ Topics to cover:
 
 ### 2.4 Structured Data with `ios_facts`
 
-> *(Instructor: Show the difference between raw command output and structured facts)*
+It is important to note the difference between raw data captured and structured data!
 
 - Using `cisco.ios.ios_facts` to gather structured device data
 - Why structured data matters for automation at scale
@@ -218,12 +226,9 @@ Topics to cover:
 ---
 
 ## Section 3: Pushing Changes with Ansible
-
-> **Instructor Note:** Before this section, take a moment to reinforce idempotency. Remind students that a well-written playbook should be safe to run multiple times without causing unintended changes.
+Before we jump into pushing changes with Ansible, let's spend a moment talking about idempotency. This is a crucial characteristic of well-written Ansible playbooks.
 
 ### 3.1 Making Changes Safely — `check` Mode
-
-> *(Instructor: Show check mode before making any real changes — builds good habits)*
 
 - What `--check` does and when to use it
 - Its limitations on network devices (not all modules support it fully)
@@ -234,7 +239,7 @@ ansible-playbook playbooks/push_changes.yml --check
 
 ### 3.2 Lab Task — Updating Interface Descriptions
 
-> *(Instructor: Good first change — highly visible, low risk, easy to verify)*
+Let's start with a low risk change. We will modify the interface descriptions for access switch uplinks.
 
 - Using `cisco.ios.ios_interfaces` to set interface descriptions
 - Verifying the change with a follow-up `show` task
@@ -268,7 +273,7 @@ ansible-playbook playbooks/push_changes.yml --check
 
 ### 3.3 Lab Task — Adding a VLAN
 
-> *(Instructor: Slightly more impactful change — good for showing state management)*
+In this task, we'll go for a more disruptive change. 
 
 - Using `cisco.ios.ios_vlans` to configure VLANs
 - Explaining `state: merged` vs `state: replaced` vs `state: deleted`
@@ -299,8 +304,6 @@ ansible-playbook playbooks/push_changes.yml --check
 ```
 
 ### 3.4 Saving the Configuration
-
-> *(Instructor: Don't skip this — a common gotcha for those new to IOS automation)*
 
 - Difference between running-config and startup-config
 - Using `cisco.ios.ios_config` with `save_when: always` or a dedicated save task
@@ -334,7 +337,14 @@ ansible-playbook playbooks/push_changes.yml --check
  
 # Part 2: CI/CD for Network Automation
  
-> **Instructor Note:** This section assumes students have a GitHub account and access to the workshop repository. A self-hosted GitHub Actions Runner should be pre-registered and confirmed healthy before the workshop. Students should be added as collaborators (or members of the workshop org) before the session begins.
+The lab already has the repo loaded locally and the GitHub runner installd.
+Before we begin, let's make sure we sync your GitHub accounts with the environment and get the GitHub Actions runner registered locally.
+To do so, we will create an SSH key for registering to GitHub, and then pull a registration token from GitHub for the runner.
+
+```bash
+ssh-keygen -t ed25519 -C "name@email.com"   # new SSH key
+./config.sh --url <repo> --token <token>      # register runner
+```
  
 ---
  
@@ -342,10 +352,9 @@ ansible-playbook playbooks/push_changes.yml --check
  
 ### 4.1 Why CI/CD for Network Automation?
  
-> *(Instructor: Use the "why does this matter" moment here — tell a short story about a config change that broke production and how a pipeline would have caught it before it hit a real device.)*
- 
-Topics to cover:
+Discussion points:
 - What CI/CD means in a traditional software context
+- Any examples of config changes that broke production?
 - Why the same principles apply to network automation
 - The risk of running untested playbooks directly against production devices
 - The pipeline as a safety net, not a bureaucratic hurdle
@@ -354,13 +363,13 @@ Key concepts:
 - **Workflow** — an automated sequence of jobs triggered by a code event (e.g. a git push)
 - **Job** — a logical grouping of steps (e.g. validate, test, deploy)
 - **Step** — a single unit of work inside a job
-- **GitHub Actions Runner** — the agent that executes workflow jobs
+- **GitHub Actions Runner** — the local agent that executes workflow jobs
  
 ### 4.2 Our Pipeline — The Big Picture
- 
-> *(Instructor: Walk through the end-to-end flow before diving into any individual piece. A whiteboard sketch or diagram here works well.)*
- 
-The pipeline we'll build follows this flow:
+  
+The pipeline we'll build follows the flow below.
+One thing to note is that our workflow applies to different inventories depending on the type of action that was taken.
+We'll touch on that later on in the workshop.
  
 ```
 Developer pushes playbook changes to GitHub
@@ -390,31 +399,26 @@ Developer pushes playbook changes to GitHub
 ## Section 5: GitHub Project Setup
  
 ### 5.1 Repository Structure
- 
-> *(Instructor: Show the project repository that has been pre-created for the workshop. Walk through how it maps to what they built in Part 1.)*
- 
+  
+To our repository we add a directory for our workflows and one for our PyATS validations.
+This is a toy example for education purposes but in a production environment you're likely to have more workflows and tests depending on your needs.
+
 ```
 network-automation/
 ├── .github/
 │   └── workflows/
-│       └── network-automation.yml  ← workflow definition lives here
+│       └── network-automation.yaml
 ├── ansible.cfg
 ├── inventory/
-│   └── hosts.yml
-├── group_vars/
-│   └── all.yml
 ├── playbooks/
-│   ├── push_changes.yml
-│   └── rollback.yml
+├── vars/
 └── tests/
     ├── pre_check.py
     └── post_check.py
 ```
  
 ### 5.2 Introduction to `network-automation.yml`
- 
-> *(Instructor: This file is the heart of the workflow — spend time here. Students don't need to write it from scratch but should understand every section.)*
- 
+  
 Topics to cover:
 - How GitHub reads workflow files from `.github/workflows/` on every push
 - `on` — the trigger events (push, pull_request, workflow_dispatch)
@@ -423,7 +427,7 @@ Topics to cover:
 - `steps` — the ordered list of commands and actions within a job
 - `if` / conditions — controlling when jobs trigger
  
-**Workshop `network-automation.yml` skeleton to walk through:**
+**Workshop `network-automation.yaml` skeleton to walk through:**
  
 ```yaml
 name: Network Automation Pipeline
@@ -488,10 +492,9 @@ jobs:
         run: python tests/post_check.py
 ```
  
-### 5.3 GitHub Actions Runner — How Jobs Actually Run
+### 5.3 GitHub Actions Runner
  
-> *(Instructor: Brief explanation — students often wonder "where does this actually execute?")*
- 
+How do the jobs actually run? 
 - The self-hosted Runner picks up jobs from GitHub Actions
 - The Runner environment needs reachability to both GitHub and the CML devices
 - Show the Runner status in GitHub: **Settings → Actions → Runners**
@@ -501,9 +504,8 @@ jobs:
 ## Section 6: Pre- and Post-Validation with pyATS
  
 ### 6.1 What is pyATS?
- 
-> *(Instructor: Quick intro — don't go deep on the framework internals, just enough context for the demo to make sense.)*
- 
+
+Discussion points: 
 - Cisco's Python-based test and validation framework
 - **pyATS** = the test framework; **Genie** = the library of parsers and APIs on top of it
 - Can connect to devices, run `show` commands, and return structured (parsed) data
@@ -515,11 +517,11 @@ Key concepts for this section:
 - **Diff** — comparing two snapshots to identify what changed
  
 ### 6.2 The pyATS Testbed File
- 
-> *(Instructor: Show how the testbed maps to the Ansible inventory students already built — same devices, different format.)*
+
+The testbed maps closely to the inventory files we created for Ansible! Just with different syntax... 
  
 ```yaml
-# tests/testbed.yml
+# tests/testbed/lab_testbed.yaml
 testbed:
   name: workshop_lab
  
@@ -540,9 +542,7 @@ devices:
 ```
  
 ### 6.3 Pre-Check Script Walkthrough
- 
-> *(Instructor: Walk through the pre-built script — students do NOT write this from scratch. Focus on what it does, not how every line works.)*
- 
+  
 What the pre-check script does:
 - Connects to all devices using the testbed
 - Runs a set of `show` commands and parses the output via Genie
@@ -556,7 +556,7 @@ from genie.testbed import load
 import json
  
 # Load the testbed
-testbed = load("tests/testbed.yml")
+testbed = load("tests/testbed/lab_testbed.yml")
  
 snapshot = {}
  
@@ -581,8 +581,6 @@ print("Pre-check complete. Snapshot saved.")
  
 ### 6.4 Post-Check Script Walkthrough
  
-> *(Instructor: Show how the post-check loads the pre-snapshot artifact and compares it to current state. The diff output is the payoff moment — show a real diff if possible.)*
- 
 What the post-check script does:
 - Loads `pre_snapshot.json` from the pipeline artifact
 - Reconnects to all devices and captures state again
@@ -596,7 +594,7 @@ from genie.testbed import load
 from genie.utils.diff import Diff
 import json
  
-testbed = load("tests/testbed.yml")
+testbed = load("tests/testbed/testbed.yml")
  
 with open("pre_snapshot.json") as f:
     pre_snapshot = json.load(f)
@@ -629,37 +627,34 @@ if issues_found:
 ```
  
 ### 6.5 Lab Task — Trigger the Workflow
- 
-> *(Instructor: Have students make a small change to a playbook and push it to GitHub. Watch the workflow run together.)*
- 
+  
 Steps:
-1. Make a minor change to `playbooks/push_changes.yml` (e.g. add a new interface description)
-2. Commit and push to the `main` branch
-3. Navigate to the **Actions** tab in GitHub and watch the jobs execute
-4. Review the step logs for each job — pre-check, deploy, post-check
-5. Examine the diff output in the post-check job log
+1. Create a new feature branch with Git. (`git checkout -b feature/update-motd`)
+2. Make a minor change to `playbooks/update_motd.yml` (e.g. add different language)
+3. Commit and push to the `feature/update-motd` branch (`git add .` -> `git commit -m "message"` -> `git push origin feature/update-motd`)
+4. Navigate to GitHub and open a PR request for the recent feature branch push.
+5. Navigate to the **Actions** tab in GitHub and watch the jobs execute
+6. Review the step logs for each job — pre-check, deploy, post-check
+7. Examine the diff output in the post-check job log
  
 **Discussion points after the pipeline runs:**
 - What would cause the post-check to fail?
 - What happens if the deploy job fails — does post-check still run?
 - How would you add a rollback job triggered on failure?
+- What if we decide to merge the changes?
  
 ---
  
 ## Section 7: The Digital Twin — Testing Before You Touch Production
  
 ### 7.1 The Problem We're Solving
- 
-> *(Instructor: This is the "so what" moment for the whole workshop. Connect it back to the story from Section 4.1.)*
- 
+  
 - Even with a CI/CD pipeline, your playbooks are still running against real devices in the deploy stage
 - What if you could validate the playbook logic itself — before it ever touches production?
 - Enter: the CML "mini network" as a digital twin
  
 ### 7.2 How the Mini Network Works
- 
-> *(Instructor: Show the CML topology. Keep this conceptual — students don't need to build it, just understand the idea.)*
- 
+  
 Topics to cover:
 - A lightweight CML topology that mirrors the key elements of the production network
 - Same device types, same IOS versions, representative config
@@ -676,9 +671,7 @@ network-automation/
 ```
  
 ### 7.3 Extending the Pipeline for Twin Testing
- 
-> *(Instructor: Show how a single variable or inventory swap can redirect the pipeline at the CML lab instead of production.)*
- 
+  
 - Add a `test_in_twin` job before `deploy` that runs the playbook against `hosts_cml.yml`
 - If the twin job fails, the workflow stops before anything touches production
 - On pull requests, run twin only; on merge to main, run the full workflow
@@ -745,9 +738,7 @@ Walk through:
 ---
  
 ## Section Wrap-Up
- 
-> *(Instructor: Bring it all together — connect every piece of the workshop into one narrative.)*
- 
+  
 **Key takeaways from Part 2:**
  
 - A CI/CD workflow turns manual, error-prone playbook runs into a repeatable, auditable process
