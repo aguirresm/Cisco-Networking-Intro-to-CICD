@@ -17,15 +17,15 @@ Discussion questions:
 - What problem does Ansible solve?
 - Why is it important for Network Engineers?
 
-The benefits of Ansible include,
+Topics to cover:
 - Agentless automation — how it works over SSH/NETCONF
 - Idempotency — what it means and why it matters in networking
 - Key terms to know: **Control node**, **Managed nodes**, **Playbook**, **Task**, **Module**
 
 ### 1.2 Ansible Project Structure
 
-As Ansible runs only on Linux, we will be working solely in WSL on the Windows jumphost.
-The following is an overview of the directory structure of our Ansible project:
+As Ansible runs only on Linux, we will be working solely in WSL within the Windows jumphost.
+The following is an overview of the directory structure of our Ansible project. Note that the actual repository include additional files not shown we'll speak to later!
 
 ```
 ansible-cml
@@ -48,7 +48,7 @@ ansible-cml
     └── vlans.yml
 ```
 
-Key components to walk through include,
+Key components to walk through:
 
 - `ansible.cfg` — project-level configuration file
 - `inventory/` — defines the devices Ansible will manage
@@ -66,7 +66,7 @@ Topics to cover:
 **Example PROD inventory:**
 
 ```yaml
-# inventory/prod/hosts.yaml
+# ~/ansible-cml/inventory/prod/hosts.yaml
 
 all:
   children:
@@ -78,30 +78,34 @@ all:
               ansible_host: 198.18.135.11
             PROD-RTR-12:
               ansible_host: 198.18.135.12
-        switches_core:
-          hosts:
-            PROD-CORE-13:
-              ansible_host: 198.18.135.13
-            PROD-CORE-14:
-              ansible_host: 198.18.135.14
-        switches_access:
-          hosts:
-            PROD-ACC-15:
-              ansible_host: 198.18.135.15
-            PROD-ACC-16:
-              ansible_host: 198.18.135.16
-            PROD-ACC-17:
-              ansible_host: 198.18.135.17
+        switches:
+          children:
+            switches_core:
+              hosts:
+                PROD-CORE-13:
+                  ansible_host: 198.18.135.13
+                PROD-CORE-14:
+                  ansible_host: 198.18.135.14
+            switches_access:
+              hosts:
+                PROD-ACC-15:
+                  ansible_host: 198.18.135.15
+                PROD-ACC-16:
+                  ansible_host: 198.18.135.16
+                PROD-ACC-17:
+                  ansible_host: 198.18.135.17
 ```
 
 ### 1.4 Variables
+Topics to cover:
 - Where to define credentials (vars vs group_vars vs vault)
 - Common network variables: `ansible_network_os`, `ansible_connection`, `ansible_become`
 - Brief mention of **Ansible Vault** for credential security
 
-**Example `prod/group_vars/cisco.yml`:**
+**Example group_vars file :**
 
 ```yaml
+# ~/ansible-cml/inventory/prod/group_vars/all.yml`
 ansible_user: admin
 ansible_password: "{{ vault_password }}"
 ansible_network_os: cisco.ios.ios
@@ -111,8 +115,8 @@ ansible_become_method: enable
 ```
 
 ### 1.5 `ansible.cfg` Walkthrough
-The `ansible.cfg` file represents default configuration values used throughout the environment.
-This includes the inventory to use without a specified value and SSH connection information.
+The `ansible.cfg` file represents default configuration values for the Ansible engine itself.
+This could include how Ansible connects to devices, SSH settings, and default paths to use. 
 
 ```ini
 [defaults]
@@ -127,18 +131,19 @@ host_key_checking = False
 
 ### 2.1 Your First Command — `ansible` Ad-Hoc
 
-While the goal is to utilize Ansible in a structured pipeline, it can also be used as needed for ad-hoc checks!
+Discussion questions:
+- Why did we use ios_ping and not Ansible ping?
 
-- Syntax: `ansible <host/group> -m <module> -a <args> -i <inventory-path>`
+While the goal is to utilize Ansible in a structured pipeline, it can also be used as needed for ad-hoc checks.
+
+- Syntax: `ansible <host/group> -m <module> -i <inventory-path> -a <args> `
 - Run a connection test/ping against all devices to confirm connectivity
 
 **Lab Task 2.1 — Ad-Hoc Ping:**
 
 ```bash
-ansible all -m cisco.ios.ios_facts
+ansible all -m cisco.ios.ios_ping -a "dest=198.18.128.1 vrf=Mgmt-vrf"
 ```
-
-Discussion point: Why did we use `ios_facts` instead of doing a ping?
 
 ### 2.2 Anatomy of a Playbook
 Now, walking through a basic playbook, let's take a look at what each part means and how its used.
@@ -176,7 +181,7 @@ Topics to cover:
 
 ```yaml
 ---
-- name: Brownfield Discovery
+- name: Basic Discovery
   hosts: all
   gather_facts: no
 
