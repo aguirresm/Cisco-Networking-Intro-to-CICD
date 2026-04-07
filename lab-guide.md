@@ -538,9 +538,22 @@ from genie.testbed import load
 import json
 import os
  
-# Load the testbed
+# Load the testbed based on the GitHub Actions context
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-testbed = load(os.path.join(BASE_DIR, "tests/testbed/lab_testbed.yaml"))
+
+testbed_env = os.environ.get("TESTBED_ENV", "lab")  # Default to lab if not set
+
+testbed_map = {
+    "lab": "tests/testbed/lab_testbed.yaml",
+    "prod": "tests/testbed/prod_testbed.yaml",
+}
+
+testbed_path = testbed_map.get(testbed_env)
+
+if testbed_path is None:
+    raise ValueError(f"Unknown TESTBED_ENV: '{testbed_env}'. Must be 'lab' or 'prod'.")
+
+testbed = load(os.path.join(BASE_DIR, testbed_path))
  
 snapshot = {}
  
@@ -577,7 +590,22 @@ from genie.testbed import load
 from genie.utils.diff import Diff
 import json
  
-testbed = load("tests/testbed/testbed.yml")
+# Load the testbed based on the GitHub Actions context
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+testbed_env = os.environ.get("TESTBED_ENV", "lab")  # Default to lab if not set
+
+testbed_map = {
+    "lab": "tests/testbed/lab_testbed.yaml",
+    "prod": "tests/testbed/prod_testbed.yaml",
+}
+
+testbed_path = testbed_map.get(testbed_env)
+
+if testbed_path is None:
+    raise ValueError(f"Unknown TESTBED_ENV: '{testbed_env}'. Must be 'lab' or 'prod'.")
+
+testbed = load(os.path.join(BASE_DIR, testbed_path))
  
 with open("pre_snapshot.json") as f:
     pre_snapshot = json.load(f)
@@ -636,22 +664,12 @@ Steps:
 - What if you could validate the playbook logic itself — before it ever touches production?
 - Enter: the CML "mini network" as a digital twin
  
-### 7.2 How the Mini Network Works
+### 7.2 How the Digital Twin Network Works
   
 Topics to cover:
 - A lightweight CML topology that mirrors the key elements of the production network
 - Same device types, same IOS versions, representative config
 - Separate inventory file pointing at the CML devices instead of production
- 
-```
-network-automation/
-├── .github/
-│   └── workflows/
-│       └── network-automation.yml
-├── inventory/
-│   ├── hosts.yml          ← production inventory
-│   └── hosts_cml.yml      ← CML twin inventory (same structure, different IPs)
-```
  
 ### 7.3 Extending the Pipeline for Twin Testing
   
@@ -709,7 +727,7 @@ jobs:
  
 ### 7.4 Demo — Catching a Bad Playbook in the Twin
  
-> *(Instructor: Pre-stage a playbook with a deliberate error — wrong VLAN ID, bad interface name, etc. Run it through the pipeline and show it failing safely in CML before it could have hit production.)*
+Let's try a change that would've caused an issue in the environment...
  
 Walk through:
 1. Show the "bad" playbook change in GitHub
