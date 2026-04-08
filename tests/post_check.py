@@ -1,50 +1,55 @@
-from genie.testbed import load
-from genie.utils.diff import Diff
+#!/usr/bin/env python3
+"""Post-deploy stability: compare CPU/memory/ping/routes to baseline and threshold ceilings."""
+
 import json
-import os
+import sys
 
-# Load the testbed based on the GitHub Actions context
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from stability_lib import (
+    collect_device_sample,
+    compare_samples,
+    load_checks_config,
+    load_testbed,
+    threshold_defaults,
+)
 
-testbed_env = os.environ.get("TESTBED_ENV", "lab")  # Default to lab if not set
 
-testbed_map = {
-    "lab": "tests/testbed/lab_testbed.yaml",
-    "prod": "tests/testbed/prod_testbed.yaml",
-}
+def main() -> None:
+    cfg = load_checks_config()
+    thresholds = threshold_defaults(cfg)
+    testbed = load_testbed()
 
-testbed_path = testbed_map.get(testbed_env)
+    with open("pre_snapshot.json", encoding="utf-8") as f:
+        pre_snapshot = json.load(f)
 
-if testbed_path is None:
-    raise ValueError(f"Unknown TESTBED_ENV: '{testbed_env}'. Must be 'lab' or 'prod'.")
+    issues_found = False
 
-testbed = load(os.path.join(BASE_DIR, testbed_path))
+    for device_name, device in testbed.devices.items():
+        device.connect(log_stdout=False)
+        try:
+            post_sample = collect_device_sample(device, cfg)
+            pre_sample = pre_snapshot.get(device_name)
+            if pre_sample is None:
+                print(
+                    f"[{device_name}] No pre-snapshot baseline; skipping stability compare."
+                )
+                continue
 
-with open("pre_snapshot.json") as f:
-    pre_snapshot = json.load(f)
+            issues = compare_samples(pre_sample, post_sample, thresholds)
+            if issues:
+                issues_found = True
+                print(f"\n[{device_name}] Post-check stability issues:")
+                for msg in issues:
+                    print(f"  - {msg}")
+            else:
+                print(
+                    f"[{device_name}] Post-check OK — within stability thresholds. ✓"
+                )
+        finally:
+            device.disconnect()
 
-issues_found = False
+    if issues_found:
+        sys.exit(1)
 
-for device_name, device in testbed.devices.items():
-    device.connect(log_stdout=False)
 
-    post_state = {
-        "interfaces": device.parse("show ip interface brief"),
-        "vlans": device.parse("show vlan brief"),
-    }
-
-    device.disconnect()
-
-    # Diff pre vs post
-    diff = Diff(pre_snapshot[device_name], post_state)
-    diff.findDiff()
-
-    if diff.diffs:
-        print(f"\n[{device_name}] Changes detected:")
-        print(diff)
-        issues_found = True
-    else:
-        print(f"[{device_name}] No unexpected changes. ✓")
-
-if issues_found:
-    exit(1)  # Fails the pipeline stage
+if __name__ == "__main__":
+    main()

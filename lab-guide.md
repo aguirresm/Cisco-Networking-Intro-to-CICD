@@ -344,7 +344,7 @@ In this task, we'll go for a more disruptive change, enforcing specific VLANs.
  
 # Part 2: CI/CD for Network Automation
  
-The lab already has the repo loaded locally and the GitHub runner installd.
+The lab already has the repo loaded locally and the GitHub runner installed.
 Before we begin, let's make sure we sync your GitHub accounts with the environment and get the GitHub Actions runner registered locally.
 To do so, we will create an SSH key for registering to GitHub, and then pull a registration token from GitHub for the runner.
 
@@ -383,7 +383,7 @@ Developer pushes playbook changes to GitHub
         │
         ▼
 ┌───────────────┐
-│   Pre-Check   │  pyATS snapshots the network state before changes
+│   Pre-Check   │  pyATS samples platform health (CPU, memory, reachability)
 └───────┬───────┘
         │
         ▼
@@ -393,12 +393,12 @@ Developer pushes playbook changes to GitHub
         │
         ▼
 ┌───────────────┐
-│  Post-Check   │  pyATS validates state after changes, diffs against pre
+│  Post-Check   │  Re-sample health; fail on overload, loss of reachability, or big regressions
 └───────────────┘
 ```
  
 - Changes are only deployed if pre-check passes
-- Post-check automatically flags unexpected state changes
+- Post-check guards **platform stability** (not a full config diff — intentional changes like new VLANs are OK)
 - The workflow result is visible in GitHub — pass or fail, shown on the Actions tab and on pull requests
  
 ---
@@ -420,6 +420,8 @@ network-automation/
 ├── playbooks/
 ├── vars/
 └── tests/
+    ├── stability_checks.yaml   # thresholds, ping targets, optional route checks
+    ├── stability_lib.py        # shared sampling & compare logic
     ├── pre_check.py
     └── post_check.py
 ```
@@ -492,8 +494,8 @@ Discussion points:
  
 Key concepts for this section:
 - **Testbed** — pyATS equivalent of an Ansible inventory (defines devices and credentials)
-- **Snapshot** — capturing the current state of the network as structured data
-- **Diff** — comparing two snapshots to identify what changed
+- **Baseline snapshot** — a small JSON record per device (CPU headline, memory use %, ping results, optional route checks) taken before deploy
+- **Stability compare** — after deploy, re-sample and fail only on **regressions** (e.g. CPU spike, memory jump, lost ICMP, missing route) — not on every intentional config change
  
 ### 6.2 The pyATS Testbed File
 
@@ -527,114 +529,78 @@ topology:
   
 What the pre-check script does:
 - Connects to all devices using the testbed
-- Runs a set of `show` commands and parses the output via Genie
-- Saves the structured result as `pre_snapshot.json`
-- Exits cleanly if all devices respond; fails the pipeline stage if any device is unreachable
+- Samples **platform stability** using **Genie** `device.parse()` where IOS/XE parsers exist: `show processes cpu`, `show memory statistics`, `ping vrf <management_vrf> … repeat …`, and `show ip route vrf <management_vrf> <prefix>` (VRF name comes from `tests/stability_checks.yaml`).
+- Saves the per-device sample as `pre_snapshot.json` for the post-check job
+- Fails the pipeline if baseline reachability is already broken (e.g. ping not 100%, or a required prefix missing from the RIB)
+
+Workshop files to walk through:
+- **`tests/stability_checks.yaml`** — `ping_targets`, optional `required_route_prefixes`, and numeric thresholds (CPU ceiling, max CPU jump, max memory jump)
+- **`tests/stability_lib.py`** — wraps Genie parsing (with optional execute/regex fallback) and implements the compare rules
+- **`tests/pre_check.py`** — thin driver: load config → connect each device → `collect_device_sample` → validate with `precheck_device_ok` → write JSON
  
-**`tests/pre_check.py` — key sections to highlight:**
+**`tests/pre_check.py` — shape of the driver:**
  
 ```python
-from genie.testbed import load
 import json
-import os
- 
-# Load the testbed based on the GitHub Actions context
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from stability_lib import (
+    collect_device_sample,
+    load_checks_config,
+    load_testbed,
+    precheck_device_ok,
+)
 
-testbed_env = os.environ.get("TESTBED_ENV", "lab")  # Default to lab if not set
-
-testbed_map = {
-    "lab": "tests/testbed/lab_testbed.yaml",
-    "prod": "tests/testbed/prod_testbed.yaml",
-}
-
-testbed_path = testbed_map.get(testbed_env)
-
-if testbed_path is None:
-    raise ValueError(f"Unknown TESTBED_ENV: '{testbed_env}'. Must be 'lab' or 'prod'.")
-
-testbed = load(os.path.join(BASE_DIR, testbed_path))
- 
+cfg = load_checks_config()
+testbed = load_testbed()
 snapshot = {}
- 
+
 for device_name, device in testbed.devices.items():
     device.connect(log_stdout=False)
- 
-    # Capture structured state
-    snapshot[device_name] = {
-        "interfaces": device.parse("show ip interface brief"),
-        "vlans": device.parse("show vlan brief"),
-    }
- 
-    device.disconnect()
- 
-# Save snapshot to file (passed as artifact to post-check)
-with open("pre_snapshot.json", "w") as f:
+    try:
+        sample = collect_device_sample(device, cfg)
+        snapshot[device_name] = sample
+        ok, issues = precheck_device_ok(sample)
+        # ... print issues, set failed flag ...
+    finally:
+        device.disconnect()
+
+with open("pre_snapshot.json", "w", encoding="utf-8") as f:
     json.dump(snapshot, f, indent=2)
- 
-print("Pre-check complete. Snapshot saved.")
 ```
  
 ### 6.4 Post-Check Script Walkthrough
  
 What the post-check script does:
 - Loads `pre_snapshot.json` from the pipeline artifact
-- Reconnects to all devices and captures state again
-- Diffs the two snapshots
-- Prints a summary of what changed and exits non-zero if unexpected changes are detected
+- Reconnects and runs the same stability sample as pre-check
+- Compares post vs pre using **thresholds** (not a blind diff of VLANs or interfaces), so playbooks like `enforce_vlans.yml` can change config without failing CI as long as the control plane stays healthy and reachability holds
  
-**`tests/post_check.py` — key sections to highlight:**
+**`tests/post_check.py` — shape of the driver:**
  
 ```python
-from genie.testbed import load
-from genie.utils.diff import Diff
-import json
- 
-# Load the testbed based on the GitHub Actions context
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from stability_lib import (
+    collect_device_sample,
+    compare_samples,
+    load_checks_config,
+    load_testbed,
+    threshold_defaults,
+)
 
-testbed_env = os.environ.get("TESTBED_ENV", "lab")  # Default to lab if not set
+cfg = load_checks_config()
+thresholds = threshold_defaults(cfg)
+testbed = load_testbed()
 
-testbed_map = {
-    "lab": "tests/testbed/lab_testbed.yaml",
-    "prod": "tests/testbed/prod_testbed.yaml",
-}
-
-testbed_path = testbed_map.get(testbed_env)
-
-if testbed_path is None:
-    raise ValueError(f"Unknown TESTBED_ENV: '{testbed_env}'. Must be 'lab' or 'prod'.")
-
-testbed = load(os.path.join(BASE_DIR, testbed_path))
- 
-with open("pre_snapshot.json") as f:
+with open("pre_snapshot.json", encoding="utf-8") as f:
     pre_snapshot = json.load(f)
- 
-issues_found = False
- 
+
 for device_name, device in testbed.devices.items():
     device.connect(log_stdout=False)
- 
-    post_state = {
-        "interfaces": device.parse("show interfaces"),
-        "vlans": device.parse("show vlan brief"),
-    }
- 
-    device.disconnect()
- 
-    # Diff pre vs post
-    diff = Diff(pre_snapshot[device_name], post_state)
-    diff.findDiff()
- 
-    if diff.diffs:
-        print(f"\n[{device_name}] Changes detected:")
-        print(diff)
-        issues_found = True
-    else:
-        print(f"[{device_name}] No unexpected changes. ✓")
- 
-if issues_found:
-    exit(1)  # Fails the pipeline stage
+    try:
+        post_sample = collect_device_sample(device, cfg)
+        pre_sample = pre_snapshot[device_name]
+        issues = compare_samples(pre_sample, post_sample, thresholds)
+        # ... print issues; exit 1 if any device regressed ...
+    finally:
+        device.disconnect()
 ```
  
 ---
@@ -699,12 +665,12 @@ Steps:
 4. Navigate to GitHub and open a PR request for the recent feature branch push.
 5. Navigate to the **Actions** tab in GitHub and watch the jobs execute
 6. Review the step logs for each job — pre-check, deploy, post-check
-7. Examine the diff output in the post-check job log
+7. Examine the post-check log for CPU, memory, ping, and route stability results
 8. If the PR looks good, merge to main.
 9. Watch the pipeline run once more, this time against the prod inventory!
  
 **Discussion points after the pipeline runs:**
-- What would cause the post-check to fail?
+- What would cause the post-check to fail? (e.g. CPU spike, memory jump, lost ping, missing route)
 - What kind of tests make sense to run for validation?
 - What happens if the deploy job fails — does post-check still run?
 - How would you add a rollback job triggered on failure?
@@ -716,12 +682,12 @@ Steps:
 **Key takeaways from Part 2:**
  
 - A CI/CD workflow turns manual, error-prone playbook runs into a repeatable, auditable process
-- pyATS pre- and post-checks give you eyes on the network state before and after every change
+- pyATS pre- and post-checks sample **platform health** before and after every change (reachability, CPU/memory headroom), without treating every config diff as a failure
 - The digital twin in CML adds a safety layer — bad playbooks fail in a lab, not in production
 - GitHub Actions artifacts carry state between jobs (pre-snapshot → post-check)
 - This entire workflow runs automatically on every push — no human has to remember to test
  
-**The full workflow in one sentence:** *Push a change → test it in the twin → snapshot production state → deploy → verify nothing unexpected changed.*
+**The full workflow in one sentence:** *Push a change → test it in the twin → baseline platform health → deploy → verify the network is still stable and reachable.*
  
 ---
  
