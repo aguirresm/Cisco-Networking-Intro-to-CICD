@@ -1,39 +1,49 @@
-from genie.testbed import load
+#!/usr/bin/env python3
+"""Baseline platform stability sample before Ansible deploy (CPU, memory, ping, optional routes)."""
+
 import json
-import os
+import sys
 
-# Load the testbed based on the GitHub Actions context
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from stability_lib import (
+    collect_device_sample,
+    load_checks_config,
+    load_testbed,
+    precheck_device_ok,
+)
 
-testbed_env = os.environ.get("TESTBED_ENV", "lab")  # Default to lab if not set
 
-testbed_map = {
-    "lab": "tests/testbed/lab_testbed.yaml",
-    "prod": "tests/testbed/prod_testbed.yaml",
-}
+def main() -> None:
+    cfg = load_checks_config()
+    testbed = load_testbed()
+    snapshot = {}
+    failed = False
 
-testbed_path = testbed_map.get(testbed_env)
+    for device_name, device in testbed.devices.items():
+        device.connect(log_stdout=False)
+        try:
+            sample = collect_device_sample(device, cfg)
+            snapshot[device_name] = sample
+            ok, issues = precheck_device_ok(sample)
+            if not ok:
+                failed = True
+                print(f"\n[{device_name}] Pre-check failed:")
+                for msg in issues:
+                    print(f"  - {msg}")
+            else:
+                print(
+                    f"[{device_name}] Pre-check OK — baseline sampled "
+                    "(CPU / memory / ping / routes)."
+                )
+        finally:
+            device.disconnect()
 
-if testbed_path is None:
-    raise ValueError(f"Unknown TESTBED_ENV: '{testbed_env}'. Must be 'lab' or 'prod'.")
+    with open("pre_snapshot.json", "w", encoding="utf-8") as f:
+        json.dump(snapshot, f, indent=2)
 
-testbed = load(os.path.join(BASE_DIR, testbed_path))
+    print("\nPre-check complete. Baseline written to pre_snapshot.json.")
+    if failed:
+        sys.exit(1)
 
-snapshot = {}
 
-for device_name, device in testbed.devices.items():
-    device.connect(log_stdout=False)
-
-    # Capture structured state
-    snapshot[device_name] = {
-        "interfaces": device.parse("show ip interface brief"),
-        "vlans": device.parse("show vlan brief"),
-    }
-
-    device.disconnect()
-
-# Save snapshot to file (passed as artifact to post-check)
-with open("pre_snapshot.json", "w") as f:
-    json.dump(snapshot, f, indent=2)
-
-print(f"Pre-check complete. Snapshot saved. (Testbed: {testbed_env})")
+if __name__ == "__main__":
+    main()

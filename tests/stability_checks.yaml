@@ -1,0 +1,20 @@
+# Platform-stability gates for CI pre/post checks (edit for your lab topology).
+#
+# ping_targets: addresses every device must reach with 100% success (before and after deploy).
+#   Use a stable next-hop, loopback, or management default route — not a host that Ansible changes.
+#
+# required_route_prefixes: optional RIB checks (show ip route <prefix>). Leave empty for pure L2
+#   switches or if only ICMP reachability matters. Add prefixes devices should still know after change.
+
+ping_targets:
+  - 198.18.135.1
+
+required_route_prefixes: []
+
+thresholds:
+  # Fail post-check if five-second CPU is above this (instant overload).
+  cpu_five_seconds_max_pct: 90
+  # Fail if five-second CPU rises this many percentage points vs pre-deploy sample.
+  cpu_five_seconds_increase_max_pct: 35
+  # Fail if processor memory "used %" rises more than this many points vs pre-deploy.
+  memory_used_pct_increase_max: 15
