@@ -8,7 +8,7 @@
 # Requirements: ansible-galaxy collection install cisco.ios
 # =============================================================================
 
-- name: Enforce MOTD Banner on Cisco IOS Devices
+- name: Enforcing MOTD Banner on Cisco IOS Devices
   hosts: all
   gather_facts: false
   connection: network_cli
