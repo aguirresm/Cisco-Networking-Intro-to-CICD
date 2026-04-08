@@ -9,6 +9,29 @@ Participant learning goals:
 
 Approximate time: 1.5hr
 
+## Starting Configuration
+The lab already has the repo loaded locally and the GitHub runner installed.
+Before we begin, let's make sure we sync your GitHub accounts with the environment and get the GitHub Actions runner registered locally.
+To do so, we will authenticate to GitHub, sync the local repo to your fork, and then pull a registration token from GitHub for the runner.
+
+```bash
+#Login to GitHub (through the browser)
+gh auth login
+
+# Create a fork of the repo on GitHub
+gh repo fork neythonstreitz/Cisco-Networking-Intro-to-CICD
+
+# Then update the remote in the existing local repo
+cd ~/ansible-cml
+git remote set-url origin https://github.com/YOUR_USERNAME/Cisco-Networking-Intro-to-CICD
+
+# Get your token from your forked repo: Settings -> Actions -> Runners -> New Self-hosted Runner
+cd ~/actions-runner
+./config.sh --url https://github.com/YOUR_USERNAME/Cisco-Networking-Intro-to-CICD --token YOUR_TOKEN
+sudo ./svc.sh install
+sudo ./svc.sh start
+```
+
 ## Section 1: Introduction to Ansible
 
 ### 1.1 What is Ansible?
@@ -344,15 +367,6 @@ In this task, we'll go for a more disruptive change, enforcing specific VLANs.
  
 # Part 2: CI/CD for Network Automation
  
-The lab already has the repo loaded locally and the GitHub runner installed.
-Before we begin, let's make sure we sync your GitHub accounts with the environment and get the GitHub Actions runner registered locally.
-To do so, we will create an SSH key for registering to GitHub, and then pull a registration token from GitHub for the runner.
-
-```bash
-ssh-keygen -t ed25519 -C "name@email.com"   # new SSH key
-./config.sh --url <repo> --token <token>      # register runner
-```
- 
 ---
  
 ## Section 4: Introduction to CI/CD
@@ -627,7 +641,7 @@ Topics to cover:
 **Extended workflow concept:**
  
 ```yaml
-# Snippet of ~/ansible-cml/.github/workflows/network-automation.yaml
+# Snippet of .github/workflows/network-automation.yaml
 
   deploy:
     runs-on: self-hosted
