@@ -17,7 +17,7 @@
     - ../group_vars/all/motd.yml
 
   tasks:
-    - name: Apply MOTD banner to devices
+    - name: Apply MOTD banner to all the devices
       cisco.ios.ios_banner:
         banner: motd
         text: "{{ motd }}"
